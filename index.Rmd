@@ -1,0 +1,191 @@
+---
+title: "Human Activity Recognition"
+author: "Arkaitz Etxezarreta"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  pdf_document:
+    toc: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = FALSE,
+                      warning = FALSE, message = FALSE)
+```
+
+## Overview
+
+One thing that people regularly do is quantify how much of a particular activity
+they do, but they rarely quantify how well they do it. The goal of this project
+is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6
+participants to predict the manner in which they did the exercise. The actual
+exercise is the `classe` variable in the training set. 
+
+A prediction model has been built using the Random Forest algorithm. The model
+performance has been measured on the validation dataset and finally it has been
+used to predict 20 different test cases, all of which turned out to be correct.
+
+
+## 1. Weight Lifting Exercises Dataset
+
+The first step is to download the training and test data sets and load them appropriately.
+
+More information about this dataset is available here: [`Weight Lifting Exercises (WLE) Dataset`](http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises "Abrir enlace") [^1].
+
+```{r download-data, cache=TRUE}
+# Remove all objects from the global environment
+rm(list = ls())
+
+# Download the training and test data for the project
+if(!file.exists("./data")) {dir.create("./data")}
+if(!file.exists("data/pml-training.csv")) {
+    download.file(
+        url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+        destfile = "./data/pml-training.csv",
+        method = "curl")}
+if(!file.exists("data/pml-testing.csv")) {
+    download.file(
+        url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
+        destfile = "./data/pml-testing.csv",
+        method = "curl")}
+dateDownloaded = date()
+
+# Load data
+training <- read.csv2("data/pml-training.csv",
+                      sep = ",", header = TRUE, na.strings = c("", "NA"))
+testing <- read.csv("data/pml-testing.csv",
+                    sep = ",", header = TRUE, na.strings = c("", "NA"))
+
+```
+
+
+## 2. Preprocessing
+
+The data sets have 160 features. I've decided to discard those with 75% or more
+values as NA.
+
+```{r preprocessing-01, cache=TRUE}
+# Load package
+selectedCols <- which(colMeans(is.na(training)) < 0.75)
+selectedCols <- selectedCols[-c(1:7)]
+
+# Subset the data
+training <- training[, selectedCols]
+testing <- testing[, selectedCols]
+testing$problem_id <- NULL # Remove 'problem_id' from the testing dataset
+```
+
+Now I'm going to convert all data but the outcome (`classe`) to numeric
+variables to make them easier to deal with.
+
+Factor variables mustn't be transformed straight to numeric variables. The
+generic function `as.character()` must be applied first. Otherwise the factors
+will be converted to their numeric storage values instead.
+
+```{r preprocessing-02, cache=TRUE}
+# Function to convert all variables to numeric
+toNumeric <- function(data, outcome) {
+    as.data.frame(
+        lapply(data,
+               FUN = function(x) {
+                   if (is.factor(x)) as.numeric(as.character(x))
+                   else as.numeric(x)}))
+}
+
+# Training dataset (it'll be then split into training and validation datasets)
+training.labels <- training$classe
+training <- toNumeric(training[, -which(names(training) == "classe")])
+training$classe <- training.labels
+
+# Testing dataset
+testing <- toNumeric(testing)
+
+# Center and scale all values
+library(caret)
+preProc <- preProcess(training, method = c("center", "scale"),
+                      thresh = .95)
+training <- predict(preProc, training)
+testing <- predict(preProc, testing)
+```
+
+In addition, all variables have been centered and scaled.
+
+
+## 3. Ensemble Modeling
+
+For cross validation, the training dataset is split into 2 part: one to perform
+the actual training (80%) and another to validate the results (20% of the data).
+
+```{r preprocessing-03, cache=TRUE}
+# Split training data into training and validation datasets
+set.seed(1492)
+trainIndex <- createDataPartition(y = training$classe, p = 0.8, list = FALSE)
+training <- training[trainIndex, ]
+validation <- training[-trainIndex, ]
+```
+
+Next, I will use Random Forest to build a prediction model. Because this
+algorithm is computationally expensive, I will first load the `doMC` package and
+use it to allow for parallel execution of the model.
+
+```{r model-rf, cache=TRUE}
+# Register all logical cores to use for parallel execution
+library(doMC)
+registerDoMC(cores = detectCores())
+
+# Train a Random Forest on the training data set
+library(randomForest)
+rf.fit <- randomForest(classe ~ ., data = training,
+                       method = "rf",
+                       ntree = 250)
+
+# Use model to predict on validation data set
+rf.val.pred <- predict(rf.fit, validation)
+
+# Predicted result
+rf.val.cm <- confusionMatrix(rf.val.pred, validation$classe)
+```
+
+The accuracy of the model on the validation dataset is: `r rf.val.cm$overall["Accuracy"]` (this is fairly unusual). Let's next ckeck out
+the confusion matrix.
+
+```{r rf-accuracy, cache=TRUE}
+# Confusion Matrix
+rf.val.cm$table
+```
+
+The OOB (out-of-bag) error rate returned by the model is a good estimate for the
+out of sample error rate, so before applying the model to the test dataset,
+let's plot the OOB error rate along with the different error rates for the 5
+types of excercises (A, B, C, D and E).
+
+```{r rf-plot, fig.align="center", cache=TRUE}
+# Plot the error rate as a function of the number of trees
+layout(matrix(c(1,2), nrow = 1), width = c(4,1))
+par(mar = c(5,4,4,0))
+plot(rf.fit, log = "y", main = "Error Rate vs. Number of Trees"); grid()
+par(mar=c(5,0,4,2))
+plot(c(0,1),type = "n", axes = F, xlab = "", ylab = "")
+legend("center", colnames(rf.fit$err.rate), col = 1:6, cex = 0.8, fill = 1:6)
+```
+
+
+## 4. Predicting on the test dataset
+
+Finally, the model trained before is used to predict on the test dataset:
+
+```{r predict-testing, cache = TRUE}
+# apply random forest model to test set
+predict(rf.fit, testing)
+```
+
+All the 20 predictions turned out to be correct according to the last test of
+the course... Yay! :-)
+
+[^1]: Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
