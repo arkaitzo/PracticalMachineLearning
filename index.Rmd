@@ -65,7 +65,11 @@ testing <- read.csv("data/pml-testing.csv",
 ```
 
 
+<<<<<<< HEAD
 ## 2. Preprocessing
+=======
+## 2. Preprocessing and Basic EDA
+>>>>>>> a32ff8ca7d61fddd95659abccc4ccdde9ef01528
 
 The data sets have 160 features. I've decided to discard those with 75% or more
 values as NA.
@@ -117,7 +121,11 @@ testing <- predict(preProc, testing)
 In addition, all variables have been centered and scaled.
 
 
+<<<<<<< HEAD
 ## 3. Ensemble Modeling
+=======
+## 3. Ensemble modeling - Random Forest
+>>>>>>> a32ff8ca7d61fddd95659abccc4ccdde9ef01528
 
 For cross validation, the training dataset is split into 2 part: one to perform
 the actual training (80%) and another to validate the results (20% of the data).

@@ -250,7 +250,11 @@ div.tocify {
 
 <h1 class="title toc-ignore">Human Activity Recognition</h1>
 <h4 class="author"><em>Arkaitz Etxezarreta</em></h4>
+<<<<<<< HEAD
 <h4 class="date"><em>julio 31, 2017</em></h4>
+=======
+<h4 class="date"><em>julio 30, 2017</em></h4>
+>>>>>>> a32ff8ca7d61fddd95659abccc4ccdde9ef01528
 
 </div>
 
@@ -287,8 +291,13 @@ training &lt;-<span class="st"> </span><span class="kw">read.csv2</span>(<span c
 testing &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;data/pml-testing.csv&quot;</span>,
                     <span class="dt">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="dt">header =</span> <span class="ot">TRUE</span>, <span class="dt">na.strings =</span> <span class="kw">c</span>(<span class="st">&quot;&quot;</span>, <span class="st">&quot;NA&quot;</span>))</code></pre></div>
 </div>
+<<<<<<< HEAD
 <div id="preprocessing" class="section level2">
 <h2>2. Preprocessing</h2>
+=======
+<div id="preprocessing-and-basic-eda" class="section level2">
+<h2>2. Preprocessing and Basic EDA</h2>
+>>>>>>> a32ff8ca7d61fddd95659abccc4ccdde9ef01528
 <p>The data sets have 160 features. I’ve decided to discard those with 75% or more values as NA.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load package</span>
 selectedCols &lt;-<span class="st"> </span><span class="kw">which</span>(<span class="kw">colMeans</span>(<span class="kw">is.na</span>(training)) &lt;<span class="st"> </span><span class="fl">0.75</span>)
@@ -325,8 +334,13 @@ training &lt;-<span class="st"> </span><span class="kw">predict</span>(preProc, 
 testing &lt;-<span class="st"> </span><span class="kw">predict</span>(preProc, testing)</code></pre></div>
 <p>In addition, all variables have been centered and scaled.</p>
 </div>
+<<<<<<< HEAD
 <div id="ensemble-modeling" class="section level2">
 <h2>3. Ensemble Modeling</h2>
+=======
+<div id="ensemble-modeling---random-forest" class="section level2">
+<h2>3. Ensemble modeling - Random Forest</h2>
+>>>>>>> a32ff8ca7d61fddd95659abccc4ccdde9ef01528
 <p>For cross validation, the training dataset is split into 2 part: one to perform the actual training (80%) and another to validate the results (20% of the data).</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Split training data into training and validation datasets</span>
 <span class="kw">set.seed</span>(<span class="dv">1492</span>)
